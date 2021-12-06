@@ -1,0 +1,5 @@
+Species	Name	FungiDB	Uniprot	Length
+C. neoformans	Gat201	CNAG_01551	J9VWG0	435
+N. crassa	sub-1	NCU01154	V5ILJ3	469
+A. fumigatus	nsdD	Afu3g13870	Q4WYQ4	493
+C. albicans	Brg1	C1_05140W_A	Q59LY1	422

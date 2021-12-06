@@ -1,0 +1,12 @@
+Accession	Name	Source Database	Type	Integrated Into	Integrated Signatures	GO Terms	Protein Accession	Protein Length	Matches
+cd00202	Zinc finger DNA binding domain; binds specifically to DNA consensus sequence ...	cdd	domain	IPR000679			q4wyq4	493	430..471
+G3DSA:3.30.50.10	Erythroid Transcription Factor GATA-1, subunit A	cathgene3d	homologous_superfamily	IPR013088			q4wyq4	493	421..481
+IPR000679	Zinc finger, GATA-type	interpro	domain		SM00401,PR00619,PF00320,PS00344,PS50114,cd00202	GO:0043565,GO:0006355	q4wyq4	493	425..477
+IPR013088	Zinc finger, NHR/GATA-type	interpro	homologous_superfamily		G3DSA:3.30.50.10	GO:0008270,GO:0006355	q4wyq4	493	421..481
+PF00320	GATA zinc finger	pfam	domain	IPR000679			q4wyq4	493	431..463
+PS00344	GATA-type zinc finger domain	prosite	conserved_site	IPR000679			q4wyq4	493	431..456
+PS50114	GATA-type zinc finger domain profile	profile	domain	IPR000679			q4wyq4	493	430..460
+PTHR45658	GATA TRANSCRIPTION FACTOR	panther	family				q4wyq4	493	422..467
+PTHR45658:SF34	GATA ZINC FINGER DOMAIN-CONTAINING PROTEIN 10-RELATED	panther	family				q4wyq4	493	422..467
+SM00401	zinc finger binding to DNA consensus sequence [AT]GATA[AG] 	smart	domain	IPR000679			q4wyq4	493	425..477
+SSF57716	Glucocorticoid receptor-like (DNA-binding domain)	ssf	homologous_superfamily				q4wyq4	493	428..475
