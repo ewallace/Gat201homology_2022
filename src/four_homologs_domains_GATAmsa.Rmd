@@ -16,6 +16,7 @@ library(stringr)
 library(ggplot2)
 library(cowplot)
 library(Biostrings)
+library(msa)
 library(here)
 ```
 
@@ -35,7 +36,7 @@ read_interpro_domains <- function(accession,
     readr::read_tsv(col_names = c("domain_accession",	"domain_name", "domain_database"	, "domain_type", "integrated_into", "integrated_signatures", "go_terms", "protein_accession", "protein_length", "domain_matches"),
                     skip = 1) 
 }
-read_interpro_domains("J9VWG0") %>% View()
+# read_interpro_domains("J9VWG0") %>% View()
 
 protein_info <- 
   here::here("data","four_homolog_info.txt") %>%
@@ -98,4 +99,55 @@ ggplot(data = domain_info_nhrgata) +
   expand_limits(x = xvalue_to_expand_for_text)
 ```
 
+## Multiple sequence alignment of GATA domains
 
+```{r load_sequences}
+protein_seqs <- here::here("data", "four_homolog_sequences_uniprot.fasta") %>% 
+  Biostrings::readAAStringSet()
+
+names(protein_seqs) <-
+  names(protein_seqs) %>%
+  stringr::str_sub(1,6)
+
+# protein_seqdf <-
+#   tibble(Uniprot = names(protein_seqs) %>%
+#            stringr::str_sub(1,6),
+#            Sequence = as.character(protein_seqs)
+#            )
+
+# nhrgata_ranges <- IRanges(start = domain_info_nhrgata$domain_start,
+#                           end = domain_info_nhrgata$domain_start)
+# 
+# nhrgata_seqs <- Biostrings::extractAt(protein_seqs,nhrgata_ranges)
+```
+
+```{r extract_nhrgata_seqs}
+# domain_info_nhrgata_wseq <- 
+#   domain_info_nhrgata %>%
+#   # group_by(Uniprot) %>%
+#   left_join(protein_seqdf) %>%
+#   mutate(domain_seq = stringr::str_sub(Sequence, domain_start, domain_end)) %>%
+#   select(-Sequence)
+  
+domain_seqs_nhrgata <- 
+  AAStringSet( x = protein_seqs[domain_info_nhrgata$Uniprot],
+               start = domain_info_nhrgata$domain_start,
+               # end = domain_info_nhrgata$domain_end,
+               width = 50)
+
+domain_msa <- msa(domain_seqs_nhrgata,method = "Muscle")
+
+domain_msa %>%
+  as("AAStringSet") %>%
+  writeXStringSet(file = here::here("results", "nhrgatadomain_muscle.fasta"))
+```
+
+```{r ggmsa_nhrgata,fig.height = 2, fig.width = 6}
+domain_msa %>%  as("AAStringSet") %>% ggmsa::ggmsa()
+```
+
+## TO DO NEXT
+
+- get sequence names and ordering consistent across figures
+- make a composite figure
+- decide what to say/do about disordered regions
