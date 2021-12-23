@@ -11,7 +11,7 @@ Domain analysis downloaded from Interpro, separately for each homolog, 2021-12-0
 - Interpro_domains_Q59LY1.tsv
 - Interpro_domains_V5ILJ3.tsv
 
-Domain analysis downloaded from Interpro, separately for each homolog, 2021-12-06
+Domain analysis downloaded from Interpro, separately for each homolog, 2021-12-16
 
 - mobidb_disorder_J9VWG0.tsv
 - mobidb_disorder_Q4WYQ4.tsv
