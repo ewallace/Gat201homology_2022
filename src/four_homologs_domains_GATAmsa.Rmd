@@ -52,6 +52,8 @@ protein_info <-
   readr::read_tsv() %>%
   mutate(Species = factor(Species, levels=Species))
 
+Species_levels = levels(protein_info$Species)
+
 domain_info_all <- protein_info %>%
   dplyr::group_by(Uniprot) %>%
   dplyr::do(read_interpro_domains(.$Uniprot)) 
@@ -62,7 +64,8 @@ domain_info_nhrgata <- domain_info_all %>%
   tidyr::separate(domain_matches, 
                   into = c("domain_start","domain_end"),
                   convert = TRUE) %>%
-  dplyr::full_join(protein_info)
+  dplyr::full_join(protein_info) %>%
+  arrange(Species)
 
 disorder_info_all <- protein_info %>%
   dplyr::group_by(Uniprot) %>%
@@ -75,7 +78,8 @@ disorder_info_mobidb_lite <- disorder_info_all %>%
   tidyr::separate(disorder_matches, 
                   into = c("disorder_start","disorder_end"),
                   convert = TRUE) %>%
-  dplyr::full_join(protein_info)
+  dplyr::full_join(protein_info) %>%
+  arrange(Species)
 ```
 ### Print the NHR/GATA domain locations
 
@@ -97,14 +101,13 @@ disorder_info_mobidb_lite
 xvalue_to_expand_for_text <- with(domain_info_nhrgata,
                                 max(Length - domain_start) + 20)
 
-ggplot(data = domain_info_nhrgata) +
+ggplot(data = domain_info_nhrgata,
+       aes(y = Species, yend = Species)) +
   theme_nothing() +
   theme(axis.text.y = element_text()) +
-  geom_segment(aes(x = 1, xend = Length,
-                   y = Species, yend = Species), 
+  geom_segment(aes(x = 1, xend = Length), 
                size = 8, colour = "grey50") +
-  geom_segment(aes(x = domain_start, xend = domain_end,
-                   y = Species, yend = Species), 
+  geom_segment(aes(x = domain_start, xend = domain_end), 
                size = 8, colour = "red2") +
   expand_limits(x = xvalue_to_expand_for_text)
 ```
@@ -112,55 +115,57 @@ ggplot(data = domain_info_nhrgata) +
 ### Domain plot highlighting aligned NHR/GATA domains
 
 ```{r domain_plot, fig.height = 2.4, fig.width = 5}
-ggplot(data = domain_info_nhrgata) +
+ggplot(data = domain_info_nhrgata,
+       aes(y = Species, yend = Species)) +
   theme_nothing() +
   theme(axis.text.y = element_text()) +
-  geom_segment(aes(x = 1 - domain_start, xend = Length - domain_start,
-                   y = Species, yend = Species), 
+  geom_segment(aes(x = 1 - domain_start, xend = Length - domain_start), 
                size = 8, colour = "grey50") +
-  geom_segment(aes(x = 1, xend = domain_end - domain_start,
-                   y = Species, yend = Species), 
+  geom_segment(aes(x = 1, xend = domain_end - domain_start), 
                size = 8, colour = "red2") +
-  geom_text(aes(x = 1 - domain_start, y = Species, label = 1), 
+  geom_text(aes(x = 1 - domain_start, label = 1), 
             hjust = 1.1) +
-  geom_text(aes(x = Length - domain_start, y = Species, label = Length), 
+  geom_text(aes(x = Length - domain_start, label = Length), 
             hjust = -0.1)  +
-  geom_text(aes(x = 1, y = Species, label = domain_start), 
+  geom_text(aes(x = 1, label = domain_start), 
             vjust = -1.3, colour = "darkred") +
-  geom_text(aes(x = domain_end - domain_start, y = Species, label = domain_end), 
+  geom_text(aes(x = domain_end - domain_start, label = domain_end), 
             vjust = -1.3, colour = "darkred") +
   expand_limits(x = xvalue_to_expand_for_text)
 ```
 
 ### Plot highlighting NHR/GATA domains and including disordered regions
 
-```{r domain_disorder_plot, fig.height = 2.4, fig.width = 5}
+```{r domain_disorder_plot, fig.height = 2.2, fig.width = 5}
 domain_info_nhrgata_plus <-
   # hack to make it easier to plot position of disordered regions relative to GATA
   left_join(domain_info_nhrgata,
             disorder_info_mobidb_lite)
 
-ggplot(data = domain_info_nhrgata_plus) +
+ggplot(data = domain_info_nhrgata_plus %>%
+         # relevel factors to display C. neoformans first
+         mutate(Speciesrev = factor(Species, levels = rev(Species_levels))),
+       aes(y = Speciesrev, yend = Speciesrev)) +
   theme_nothing() +
   theme(axis.text.y = element_text()) +
-  geom_segment(aes(x = 1 - domain_start, xend = Length - domain_start,
-                   y = Species, yend = Species), 
+  geom_segment(aes(x = 1 - domain_start, xend = Length - domain_start), 
                size = 8, colour = "grey50") +
-  geom_segment(aes(x = disorder_start - domain_start, xend = disorder_end - domain_start,
-                   y = Species, yend = Species), 
+  geom_segment(aes(x = disorder_start - domain_start, xend = disorder_end - domain_start), 
                size = 8, colour = "dodgerblue") +
-  geom_segment(aes(x = 1, xend = domain_end - domain_start,
-                   y = Species, yend = Species), 
+  geom_segment(aes(x = 1, xend = domain_end - domain_start), 
                size = 8, colour = "red2") +
-  geom_text(aes(x = 1 - domain_start, y = Species, label = 1), 
+  geom_text(aes(x = 1 - domain_start, label = 1), 
             hjust = 1.1) +
-  geom_text(aes(x = Length - domain_start, y = Species, label = Length), 
+  geom_text(aes(x = Length - domain_start, label = Length), 
             hjust = -0.1)  +
-  geom_text(aes(x = 1, y = Species, label = domain_start), 
+  geom_text(aes(x = 1, label = domain_start), 
             vjust = -1.3, colour = "darkred") +
-  geom_text(aes(x = domain_end - domain_start, y = Species, label = domain_end), 
+  geom_text(aes(x = domain_end - domain_start, label = domain_end), 
             vjust = -1.3, colour = "darkred") +
   expand_limits(x = xvalue_to_expand_for_text)
+
+ggsave(filename = here::here("results", "domain_disorder_plot.pdf"), 
+       height = 2.2, width = 5)
 ```
 
 ## Multiple sequence alignment of GATA domains
@@ -199,19 +204,28 @@ domain_seqs_nhrgata <-
                # end = domain_info_nhrgata$domain_end,
                width = 50)
 
-domain_msa <- msa(domain_seqs_nhrgata,method = "Muscle")
+domain_msa <- msa(domain_seqs_nhrgata,method = "Muscle", order = "input")
 
 domain_msa %>%
   as("AAStringSet") %>%
   writeXStringSet(file = here::here("results", "nhrgatadomain_muscle.fasta"))
 ```
 
-```{r ggmsa_nhrgata,fig.height = 2, fig.width = 6}
-domain_msa %>%  as("AAStringSet") %>% ggmsa::ggmsa()
+```{r ggmsa_nhrgata,fig.height = 0.8, fig.width = 5}
+uniprot_to_species <- protein_info$Species %>%
+  setNames(protein_info$Uniprot)
+
+domain_msa %>%  
+  as("AAStringSet") %>% 
+  setNames(uniprot_to_species[names(.)]) %>%
+  ggmsa::ggmsa(color = "Clustal", seq_name = TRUE ) + 
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_text(size = 7))
+
+ggsave(filename = here::here("results", "ggmsa_nhrgata.pdf"), 
+       height = 0.8, width = 5)
 ```
 
-## TO DO NEXT
+## To Do
 
-- get sequence names and ordering consistent across figures
-- make a composite figure
-- decide what to say/do about disordered regions
+- make a composite figure in inkscape
