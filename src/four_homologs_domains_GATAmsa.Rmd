@@ -211,7 +211,7 @@ domain_msa %>%
   writeXStringSet(file = here::here("results", "nhrgatadomain_muscle.fasta"))
 ```
 
-```{r ggmsa_nhrgata,fig.height = 0.8, fig.width = 5}
+```{r ggmsa_nhrgata,fig.height = 0.5, fig.width = 5}
 uniprot_to_species <- protein_info$Species %>%
   setNames(protein_info$Uniprot)
 
@@ -223,7 +223,7 @@ domain_msa %>%
         axis.text.y = element_text(size = 7))
 
 ggsave(filename = here::here("results", "ggmsa_nhrgata.pdf"), 
-       height = 0.8, width = 5)
+       height = 0.5, width = 5)
 ```
 
 ## To Do
