@@ -191,7 +191,7 @@ pre code {
 <div id="load-data-on-interpro-domains-and-sequences" class="section level1">
 <h1>Load data on interpro domains and sequences</h1>
 <pre class="r"><code>read_interpro_domains &lt;- function(accession,
-                                  prefix = here::here(&quot;data&quot;,&quot;Interpro-domains-&quot;), 
+                                  prefix = here::here(&quot;data&quot;,&quot;Interpro_domains_&quot;), 
                                   suffix = &quot;.tsv&quot;) {
   paste0(prefix, accession, suffix) %&gt;%
     readr::read_tsv(col_names = c(&quot;domain_accession&quot;,   &quot;domain_name&quot;, &quot;domain_database&quot;    , &quot;domain_type&quot;, &quot;integrated_into&quot;, &quot;integrated_signatures&quot;, &quot;go_terms&quot;, &quot;protein_accession&quot;, &quot;protein_length&quot;, &quot;domain_matches&quot;),

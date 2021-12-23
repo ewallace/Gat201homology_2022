@@ -6,7 +6,14 @@
 
 Domain analysis downloaded from Interpro, separately for each homolog, 2021-12-06
 
-- Interpro-domains-J9VWG0.tsv
-- Interpro-domains-Q4WYQ4.tsv
-- Interpro-domains-Q59LY1.tsv
-- Interpro-domains-V5ILJ3.tsv
+- Interpro_domains_J9VWG0.tsv
+- Interpro_domains_Q4WYQ4.tsv
+- Interpro_domains_Q59LY1.tsv
+- Interpro_domains_V5ILJ3.tsv
+
+Domain analysis downloaded from Interpro, separately for each homolog, 2021-12-06
+
+- mobidb_disorder_J9VWG0.tsv
+- mobidb_disorder_Q4WYQ4.tsv
+- mobidb_disorder_Q59LY1.tsv
+- mobidb_disorder_V5ILJ3.tsv

@@ -30,7 +30,7 @@ We aim to plot the domain structure, and to show a multiple sequence alignment o
 
 ```{r load_data}
 read_interpro_domains <- function(accession,
-                                  prefix = here::here("data","Interpro-domains-"), 
+                                  prefix = here::here("data","Interpro_domains_"), 
                                   suffix = ".tsv") {
   paste0(prefix, accession, suffix) %>%
     readr::read_tsv(col_names = c("domain_accession",	"domain_name", "domain_database"	, "domain_type", "integrated_into", "integrated_signatures", "go_terms", "protein_accession", "protein_length", "domain_matches"),
