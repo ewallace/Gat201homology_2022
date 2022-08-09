@@ -1,7 +1,7 @@
 ---
 title: "Four key homologs of Gat201"
 author: "Edward Wallace"
-date: "07/12/2021"
+date: "2021-07-21"
 output: 
   html_document:
     toc: true
@@ -176,7 +176,7 @@ protein_seqs <- here::here("data", "four_homolog_sequences_uniprot.fasta") %>%
 
 names(protein_seqs) <-
   names(protein_seqs) %>%
-  stringr::str_sub(1,6)
+  stringr::word(1)
 
 # protein_seqdf <-
 #   tibble(Uniprot = names(protein_seqs) %>%

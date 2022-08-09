@@ -1,0 +1,231 @@
+---
+title: "Five key homologs of Gat201"
+author: "Edward Wallace"
+date: "2022-07-23"
+output: 
+  html_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(ggplot2)
+library(cowplot)
+library(Biostrings)
+library(msa)
+library(here)
+```
+
+# Summary 
+
+This is an introductory homology analysis of _Cryptococcus neoformans_ Gat201, along with 3 other landmark homologs.
+
+We aim to plot the domain structure, and to show a multiple sequence alignment of the shared GATA zinc-finger domain.
+
+# Load data on interpro domains and sequences
+
+```{r load_data}
+read_interpro_domains <- function(accession,
+                                  prefix = here::here("data","Interpro_domains_"), 
+                                  suffix = ".tsv") {
+  paste0(prefix, accession, suffix) %>%
+    readr::read_tsv(col_names = c("domain_accession",	"domain_name", "domain_database"	, "domain_type", "integrated_into", "integrated_signatures", "go_terms", "protein_accession", "protein_length", "domain_matches"),
+                    skip = 1) 
+}
+# read_interpro_domains("J9VWG0") %>% View()
+
+read_mobidb_disorder <- function(accession,
+                                  prefix = here::here("data","mobidb_disorder_"), 
+                                  suffix = ".tsv") {
+  paste0(prefix, accession, suffix) %>%
+    readr::read_tsv(col_names = c("protein_accession", "disorder_name", "disorder_matches",	"content_fraction", "content_count", "protein_length"),
+                    skip = 1)
+}
+# read_mobidb_disorder("J9VWG0") %>% View()
+
+protein_info <- 
+  here::here("data","five_homolog_info.txt") %>%
+  readr::read_tsv() %>%
+  mutate(Species = factor(Species, levels=Species))
+
+Species_levels = levels(protein_info$Species)
+
+domain_info_all <- protein_info %>%
+  dplyr::group_by(Uniprot) %>%
+  dplyr::do(read_interpro_domains(.$Uniprot)) 
+
+domain_info_nhrgata <- domain_info_all %>%
+  dplyr::filter(domain_accession == "IPR013088") %>%
+  dplyr::select(Uniprot, domain_accession, domain_name, domain_matches) %>%
+  tidyr::separate(domain_matches, 
+                  into = c("domain_start","domain_end"),
+                  convert = TRUE) %>%
+  dplyr::full_join(protein_info) %>%
+  arrange(Species)
+
+disorder_info_all <- protein_info %>%
+  dplyr::group_by(Uniprot) %>%
+  dplyr::do(read_mobidb_disorder(.$Uniprot)) 
+
+disorder_info_mobidb_lite <- disorder_info_all %>%
+  dplyr::filter(disorder_name == "prediction-disorder-mobidb_lite") %>%
+  dplyr::select(Uniprot, disorder_name, disorder_matches) %>%
+  tidyr::separate_rows(disorder_matches, sep = ",") %>%
+  tidyr::separate(disorder_matches, 
+                  into = c("disorder_start","disorder_end"),
+                  convert = TRUE) %>%
+  dplyr::full_join(protein_info) %>%
+  arrange(Species)
+```
+### Print the NHR/GATA domain locations
+
+```{r print_domain_info_nhrgata}
+domain_info_nhrgata
+```
+
+### Print the MobiDB lite consensus disordered region predictions
+
+```{r print_disorder_info_mobidb_lite}
+disorder_info_mobidb_lite
+```
+
+# Domain plots
+
+### Simple domain plot aligned at start of protein
+
+```{r domain_plot_simple, fig.height = 2, fig.width = 5}
+xvalue_to_expand_for_text <- with(domain_info_nhrgata,
+                                max(Length - domain_start) + 25)
+
+ggplot(data = domain_info_nhrgata,
+       aes(y = Species, yend = Species)) +
+  theme_nothing() +
+  theme(axis.text.y = element_text()) +
+  geom_segment(aes(x = 1, xend = Length), 
+               size = 8, colour = "grey50") +
+  geom_segment(aes(x = domain_start, xend = domain_end), 
+               size = 8, colour = "red2") +
+  expand_limits(x = xvalue_to_expand_for_text)
+```
+
+### Domain plot highlighting aligned NHR/GATA domains
+
+```{r domain_plot, fig.height = 2.4, fig.width = 5}
+ggplot(data = domain_info_nhrgata,
+       aes(y = Species, yend = Species)) +
+  theme_nothing() +
+  theme(axis.text.y = element_text()) +
+  geom_segment(aes(x = 1 - domain_start, xend = Length - domain_start), 
+               size = 8, colour = "grey50") +
+  geom_segment(aes(x = 1, xend = domain_end - domain_start), 
+               size = 8, colour = "red2") +
+  geom_text(aes(x = 1 - domain_start, label = 1), 
+            hjust = 1.1) +
+  geom_text(aes(x = Length - domain_start, label = Length), 
+            hjust = -0.1)  +
+  geom_text(aes(x = 1, label = domain_start), 
+            vjust = -1.3, hjust = 0.7, colour = "darkred") +
+  geom_text(aes(x = domain_end - domain_start, label = domain_end), 
+            vjust = -1.3, hjust = 0.3, colour = "darkred") +
+  expand_limits(x = xvalue_to_expand_for_text)
+```
+
+### Plot highlighting NHR/GATA domains and including disordered regions
+
+```{r domain_disorder_plot, fig.height = 2.2, fig.width = 5}
+domain_info_nhrgata_plus <-
+  # hack to make it easier to plot position of disordered regions relative to GATA
+  left_join(domain_info_nhrgata,
+            disorder_info_mobidb_lite)
+
+ggplot(data = domain_info_nhrgata_plus %>%
+         # relevel factors to display C. neoformans first
+         mutate(Speciesrev = factor(Species, levels = rev(Species_levels))),
+       aes(y = Speciesrev, yend = Speciesrev)) +
+  theme_nothing() +
+  theme(axis.text.y = element_text()) +
+  geom_segment(aes(x = 1 - domain_start, xend = Length - domain_start), 
+               size = 8, colour = "grey50") +
+  geom_segment(aes(x = disorder_start - domain_start, xend = disorder_end - domain_start), 
+               size = 8, colour = "dodgerblue") +
+  geom_segment(aes(x = 1, xend = domain_end - domain_start), 
+               size = 8, colour = "red2") +
+  geom_text(aes(x = 1 - domain_start, label = 1), 
+            hjust = 1.1) +
+  geom_text(aes(x = Length - domain_start, label = Length), 
+            hjust = -0.1)  +
+  geom_text(aes(x = 1, label = domain_start), 
+            vjust = -1.3, hjust = 0.7, colour = "darkred") +
+  geom_text(aes(x = domain_end - domain_start, label = domain_end), 
+            vjust = -1.3, hjust = 0.3, colour = "darkred") +
+  expand_limits(x = xvalue_to_expand_for_text)
+
+ggsave(filename = here::here("results", "domain_disorder_plot.pdf"), 
+       height = 2.4, width = 5)
+```
+
+## Multiple sequence alignment of GATA domains
+
+```{r load_sequences}
+protein_seqs <- here::here("data", "five_homolog_sequences_uniprot.fasta") %>% 
+  Biostrings::readAAStringSet()
+
+names(protein_seqs) <-
+  names(protein_seqs) %>%
+  stringr::word(1)
+
+# protein_seqdf <-
+#   tibble(Uniprot = names(protein_seqs) %>%
+#            stringr::str_sub(1,6),
+#            Sequence = as.character(protein_seqs)
+#            )
+
+# nhrgata_ranges <- IRanges(start = domain_info_nhrgata$domain_start,
+#                           end = domain_info_nhrgata$domain_start)
+# 
+# nhrgata_seqs <- Biostrings::extractAt(protein_seqs,nhrgata_ranges)
+```
+
+```{r extract_nhrgata_seqs}
+# domain_info_nhrgata_wseq <- 
+#   domain_info_nhrgata %>%
+#   # group_by(Uniprot) %>%
+#   left_join(protein_seqdf) %>%
+#   mutate(domain_seq = stringr::str_sub(Sequence, domain_start, domain_end)) %>%
+#   select(-Sequence)
+  
+domain_seqs_nhrgata <- 
+  AAStringSet( x = protein_seqs[domain_info_nhrgata$Uniprot],
+               start = domain_info_nhrgata$domain_start,
+               # end = domain_info_nhrgata$domain_end,
+               width = 50)
+
+domain_msa <- msa(domain_seqs_nhrgata,method = "Muscle", order = "input")
+
+domain_msa %>%
+  as("AAStringSet") %>%
+  writeXStringSet(file = here::here("results", "nhrgatadomain_muscle.fasta"))
+```
+
+```{r ggmsa_nhrgata,fig.height = 0.5, fig.width = 5}
+uniprot_to_species <- protein_info$Species %>%
+  setNames(protein_info$Uniprot)
+
+domain_msa %>%  
+  as("AAStringSet") %>% 
+  setNames(uniprot_to_species[names(.)]) %>%
+  ggmsa::ggmsa(color = "Clustal", seq_name = TRUE ) + 
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_text(size = 7))
+
+ggsave(filename = here::here("results", "ggmsa_nhrgata.pdf"), 
+       height = 0.7, width = 5)
+```
+
+## To Do
+
+- make a composite figure in inkscape
