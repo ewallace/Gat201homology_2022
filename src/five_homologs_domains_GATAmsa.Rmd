@@ -22,9 +22,23 @@ library(here)
 
 # Summary 
 
-This is an introductory homology analysis of _Cryptococcus neoformans_ Gat201, along with 3 other landmark homologs.
+This is a small-scale homology analysis of _Cryptococcus neoformans_ Gat201, along with 4 other landmark homologs.
 
-We aim to plot the domain structure, and to show a multiple sequence alignment of the shared GATA zinc-finger domain.
+We plot the domain structure, and show a multiple sequence alignment of the shared GATA zinc-finger domain.
+
+# Load protein information and identifiers from file
+
+```{r load_protein_info}
+protein_info <- 
+  here::here("data","five_homolog_info.txt") %>%
+  readr::read_tsv() %>%
+  dplyr::mutate(Species = factor(Species, levels=Species))
+
+Species_levels = levels(protein_info$Species)
+
+protein_info
+```
+
 
 # Load data on interpro domains and sequences
 
@@ -47,13 +61,6 @@ read_mobidb_disorder <- function(accession,
 }
 # read_mobidb_disorder("J9VWG0") %>% View()
 
-protein_info <- 
-  here::here("data","five_homolog_info.txt") %>%
-  readr::read_tsv() %>%
-  mutate(Species = factor(Species, levels=Species))
-
-Species_levels = levels(protein_info$Species)
-
 domain_info_all <- protein_info %>%
   dplyr::group_by(Uniprot) %>%
   dplyr::do(read_interpro_domains(.$Uniprot)) 
@@ -65,7 +72,7 @@ domain_info_nhrgata <- domain_info_all %>%
                   into = c("domain_start","domain_end"),
                   convert = TRUE) %>%
   dplyr::full_join(protein_info) %>%
-  arrange(Species)
+  dplyr::arrange(Species)
 
 disorder_info_all <- protein_info %>%
   dplyr::group_by(Uniprot) %>%
@@ -79,8 +86,9 @@ disorder_info_mobidb_lite <- disorder_info_all %>%
                   into = c("disorder_start","disorder_end"),
                   convert = TRUE) %>%
   dplyr::full_join(protein_info) %>%
-  arrange(Species)
+  dplyr::arrange(Species)
 ```
+
 ### Print the NHR/GATA domain locations
 
 ```{r print_domain_info_nhrgata}
@@ -170,6 +178,8 @@ ggsave(filename = here::here("results", "domain_disorder_plot.pdf"),
 
 ## Multiple sequence alignment of GATA domains
 
+Load protein sequences.
+
 ```{r load_sequences}
 protein_seqs <- here::here("data", "five_homolog_sequences_uniprot.fasta") %>% 
   Biostrings::readAAStringSet()
@@ -178,38 +188,26 @@ names(protein_seqs) <-
   names(protein_seqs) %>%
   stringr::word(1)
 
-# protein_seqdf <-
-#   tibble(Uniprot = names(protein_seqs) %>%
-#            stringr::str_sub(1,6),
-#            Sequence = as.character(protein_seqs)
-#            )
-
-# nhrgata_ranges <- IRanges(start = domain_info_nhrgata$domain_start,
-#                           end = domain_info_nhrgata$domain_start)
-# 
-# nhrgata_seqs <- Biostrings::extractAt(protein_seqs,nhrgata_ranges)
 ```
 
+Extract the NHR/GATA domain sequences, align using Muscle in the msa function.
+
 ```{r extract_nhrgata_seqs}
-# domain_info_nhrgata_wseq <- 
-#   domain_info_nhrgata %>%
-#   # group_by(Uniprot) %>%
-#   left_join(protein_seqdf) %>%
-#   mutate(domain_seq = stringr::str_sub(Sequence, domain_start, domain_end)) %>%
-#   select(-Sequence)
-  
+
 domain_seqs_nhrgata <- 
   AAStringSet( x = protein_seqs[domain_info_nhrgata$Uniprot],
                start = domain_info_nhrgata$domain_start,
                # end = domain_info_nhrgata$domain_end,
                width = 50)
 
-domain_msa <- msa(domain_seqs_nhrgata,method = "Muscle", order = "input")
+domain_msa <- msa(domain_seqs_nhrgata, method = "Muscle", order = "input")
 
 domain_msa %>%
   as("AAStringSet") %>%
   writeXStringSet(file = here::here("results", "nhrgatadomain_muscle.fasta"))
 ```
+
+Plot figure of the multiple sequence alignment.
 
 ```{r ggmsa_nhrgata,fig.height = 0.5, fig.width = 5}
 uniprot_to_species <- protein_info$Species %>%
@@ -226,6 +224,10 @@ ggsave(filename = here::here("results", "ggmsa_nhrgata.pdf"),
        height = 0.7, width = 5)
 ```
 
-## To Do
 
-- make a composite figure in inkscape
+# Session info for reproducibility
+
+```{r session_info}
+sessionInfo()
+```
+
