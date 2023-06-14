@@ -106,6 +106,7 @@ disorder_info_mobidb_lite
 ### Simple domain plot aligned at start of protein
 
 ```{r domain_plot_simple, fig.height = 2, fig.width = 5}
+# to expand x-limits so that text labels print inside the plot
 xvalue_to_expand_for_text <- with(domain_info_nhrgata,
                                 max(Length - domain_start) + 25)
 
@@ -117,7 +118,7 @@ ggplot(data = domain_info_nhrgata,
                size = 8, colour = "grey50") +
   geom_segment(aes(x = domain_start, xend = domain_end), 
                size = 8, colour = "red2") +
-  expand_limits(x = xvalue_to_expand_for_text)
+  expand_limits(x = xvalue_to_expand_for_text) # expanding limits as above
 ```
 
 ### Domain plot highlighting aligned NHR/GATA domains
@@ -139,7 +140,7 @@ ggplot(data = domain_info_nhrgata,
             vjust = -1.3, hjust = 0.7, colour = "darkred") +
   geom_text(aes(x = domain_end - domain_start, label = domain_end), 
             vjust = -1.3, hjust = 0.3, colour = "darkred") +
-  expand_limits(x = xvalue_to_expand_for_text)
+  expand_limits(x = xvalue_to_expand_for_text) # again expanding limits as above
 ```
 
 ### Plot highlighting NHR/GATA domains and including disordered regions
@@ -170,7 +171,7 @@ ggplot(data = domain_info_nhrgata_plus %>%
             vjust = -1.3, hjust = 0.7, colour = "darkred") +
   geom_text(aes(x = domain_end - domain_start, label = domain_end), 
             vjust = -1.3, hjust = 0.3, colour = "darkred") +
-  expand_limits(x = xvalue_to_expand_for_text)
+  expand_limits(x = xvalue_to_expand_for_text)  # again expanding limits as above
 
 ggsave(filename = here::here("results", "domain_disorder_plot.pdf"), 
        height = 2.4, width = 5)
