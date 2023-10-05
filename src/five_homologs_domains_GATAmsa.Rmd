@@ -17,6 +17,7 @@ library(ggplot2)
 library(cowplot)
 library(Biostrings)
 library(msa)
+library(ggmsa)
 library(here)
 ```
 
@@ -24,7 +25,7 @@ library(here)
 
 This is a small-scale homology analysis of _Cryptococcus neoformans_ Gat201, along with 4 other landmark homologs.
 
-We plot the domain structure, and show a multiple sequence alignment of the shared GATA zinc-finger domain.
+We plot the domain structure, and show a multiple sequence alignment of the conserved GATA zinc-finger domain.
 
 # Load protein information and identifiers from file
 
@@ -115,9 +116,9 @@ ggplot(data = domain_info_nhrgata,
   theme_nothing() +
   theme(axis.text.y = element_text()) +
   geom_segment(aes(x = 1, xend = Length), 
-               size = 8, colour = "grey50") +
+               linewidth = 8, colour = "grey50") +
   geom_segment(aes(x = domain_start, xend = domain_end), 
-               size = 8, colour = "red2") +
+               linewidth = 8, colour = "red2") +
   expand_limits(x = xvalue_to_expand_for_text) # expanding limits as above
 ```
 
@@ -129,9 +130,9 @@ ggplot(data = domain_info_nhrgata,
   theme_nothing() +
   theme(axis.text.y = element_text()) +
   geom_segment(aes(x = 1 - domain_start, xend = Length - domain_start), 
-               size = 8, colour = "grey50") +
+               linewidth = 8, colour = "grey50") +
   geom_segment(aes(x = 1, xend = domain_end - domain_start), 
-               size = 8, colour = "red2") +
+               linewidth = 8, colour = "red2") +
   geom_text(aes(x = 1 - domain_start, label = 1), 
             hjust = 1.1) +
   geom_text(aes(x = Length - domain_start, label = Length), 
@@ -158,11 +159,11 @@ ggplot(data = domain_info_nhrgata_plus %>%
   theme_nothing() +
   theme(axis.text.y = element_text()) +
   geom_segment(aes(x = 1 - domain_start, xend = Length - domain_start), 
-               size = 8, colour = "grey50") +
+               linewidth = 8, colour = "grey50") +
   geom_segment(aes(x = disorder_start - domain_start, xend = disorder_end - domain_start), 
-               size = 8, colour = "dodgerblue") +
+               linewidth = 8, colour = "dodgerblue") +
   geom_segment(aes(x = 1, xend = domain_end - domain_start), 
-               size = 8, colour = "red2") +
+               linewidth = 8, colour = "red2") +
   geom_text(aes(x = 1 - domain_start, label = 1), 
             hjust = 1.1) +
   geom_text(aes(x = Length - domain_start, label = Length), 
