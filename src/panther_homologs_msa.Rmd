@@ -1,0 +1,111 @@
+---
+title: "Multiple Sequence Alignment of GAT201 homologs"
+author: "Edward Wallace"
+date: "2023-10-10"
+output: 
+  html_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(ggplot2)
+library(cowplot)
+library(Biostrings)
+library(msa)
+library(ggmsa)
+library(here)
+```
+
+# Summary
+
+This file takes selected fungal homologs of GAT201 with the same domain structure.
+It performs a multiple sequence alignment of these homologs.
+
+The output multiple sequence alignment can then be used to calculate a phylogenetic tree.
+
+# Load gene data
+
+```{r load_gene_data}
+uniprot_df <- here::here("data","PTHR45658_subfamilies_uniprot_info_sequences.txt") %>% 
+  readr::read_tsv(comment = "#")
+
+uniprot_df
+```
+
+
+# Filter genes to those with only GATA domains
+
+We exclude homologs with other domains, including white-collar 2 (wc-2, lreB, etc.) that have an additional PAS domain.
+
+The relevant interpro domains are `IPR000679;IPR013088;`. These are two overlapping homologous superfamilies:
+
+- [IPR000679 is Zinc finger, GATA-type](https://www.ebi.ac.uk/interpro/entry/InterPro/IPR000679/)
+- [IPR013088 is Zinc finger, NHR/GATA-type](https://www.ebi.ac.uk/interpro/entry/InterPro/IPR013088/) is the larger superfamily.
+
+```{r filter_by_domain}
+gata_domains <- "IPR000679;IPR013088;"
+
+uniprot_df_gataonly <- uniprot_df %>%
+  dplyr::filter(InterPro == gata_domains)
+
+uniprot_df_gataonly %>% 
+  dplyr::select(GeneID, UniprotID, Organism, Length) %>%
+  print(n = 40)
+```
+
+## Extract Sequences only and save to fasta
+
+```{r extract_sequences}
+seqs_full_gataonly <- Biostrings::AAStringSet(x = uniprot_df_gataonly$Sequence) %>%
+  setNames(nm = uniprot_df_gataonly$UniprotID)
+
+writeXStringSet(x = seqs_full_gataonly, 
+                filepath = here::here("data","thirtysevenhomologs_1GATAdomainonly.fasta"))
+```
+
+
+# Multiple sequence alignment with Muscle
+
+```{r calculate_msa_muscle_full}
+seqs_full_gataonly_muscle <- msa(inputSeqs = seqs_full_gataonly, method = "Muscle") %>% 
+  as("AAStringSet")
+
+seqs_full_gataonly_muscle %>% 
+  writeXStringSet(filepath = here::here("data","thirtysevenhomologs_1GATAdomainonly_muscle.fasta"))
+```
+
+# Multiple sequence alignment with MAFFT (on command line)
+
+```{r calculate_msa_mafft_full}
+mafft_command <- 
+  paste("mafft", 
+        here::here("data","thirtysevenhomologs_1GATAdomainonly.fasta"),
+        ">",
+        here::here("data","thirtysevenhomologs_1GATAdomainonly_mafft.fasta"))
+
+system(mafft_command)
+
+seqs_full_gataonly_mafft <- readAAStringSet(here::here("data","thirtysevenhomologs_1GATAdomainonly_muscle.fasta"))
+```
+
+These multiple sequence alignments both (by visual inspection) fail to completely align the zinc-finger domains.
+
+# TO DO
+
+- See if we can tweak MAFFT or Muscle parameters to successfully align the GATA domain
+- Use Interpro annotations to extract domain positions and sequences
+- Make a phylogenetic tree
+- Show a MSA of (select) GATA domains
+- Update README file to reflect new contents
+
+
+# Session info for reproducibility
+
+```{r session_info}
+sessionInfo()
+```
