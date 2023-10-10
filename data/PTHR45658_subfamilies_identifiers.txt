@@ -5,8 +5,8 @@
 # Sequence identifiers only
 # Downloaded from PANTHER 18.0 on 2023-10-05 by Edward Wallace
 #
-GeneID  GeneName  Organism  Definition  SubfamilyName PTHRAnID  PTHRPersistentID
-SGD:S000004744  GAT2	Saccharomyces cerevisiae	Protein GAT2	PROTEIN GAT2-RELATED	PTHR45658:AN12	PTN000007911
+GeneID	GeneName	Organism	Definition	SubfamilyName	PTHRAnID	PTHRPersistentID
+SGD:S000004744	GAT2	Saccharomyces cerevisiae	Protein GAT2	PROTEIN GAT2-RELATED	PTHR45658:AN12	PTN000007911
 CGD:CAL0000198820	orf19.1577	Candida albicans	GATA-type domain-containing protein	PROTEIN GAT2-RELATED	PTHR45658:AN13	PTN000801059
 SGD:S000004003	GAT3	Saccharomyces cerevisiae	Protein GAT3	PROTEIN GAT2-RELATED	PTHR45658:AN15	PTN008149437
 SGD:S000001452	GAT4	Saccharomyces cerevisiae	Protein GAT4	PROTEIN GAT2-RELATED	PTHR45658:AN16	PTN008149436
@@ -52,4 +52,3 @@ EnsemblGenome:BATDEDRAFT_85119	BATDEDRAFT_85119	Batrachochytrium dendrobatidis	G
 dictyBase:DDB_G0292990	DDB0219810	Dictyostelium discoideum	Uncharacterized protein	GATA TRANSCRIPTION FACTOR 9	PTHR45658:AN83	PTN004473900
 EnsemblGenome:DICPUDRAFT_96381	gtaE	Dictyostelium purpureum	GATA-type domain-containing protein	GATA TRANSCRIPTION FACTOR 9	PTHR45658:AN84	PTN002225843
 EnsemblGenome:DICPUDRAFT_99676	DICPUDRAFT_99676	Dictyostelium purpureum	Uncharacterized protein	GATA TRANSCRIPTION FACTOR 9	PTHR45658:AN85	PTN001005958
- 	 	 	 	MIF4G DOMAIN-CONTAINING PROTEIN	PTHR45658:AN1	
