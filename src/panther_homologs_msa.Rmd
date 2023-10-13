@@ -76,31 +76,77 @@ seqs_full_gataonly_muscle <- msa(inputSeqs = seqs_full_gataonly, method = "Muscl
   as("AAStringSet")
 
 seqs_full_gataonly_muscle %>% 
-  writeXStringSet(filepath = here::here("data","thirtysevenhomologs_1GATAdomainonly_muscle.fasta"))
+  writeXStringSet(filepath = here::here("results","thirtysevenhomologs_1GATAdomainonly_muscle.fasta"))
 ```
 
 # Multiple sequence alignment with MAFFT (on command line)
 
-```{r calculate_msa_mafft_full}
+This uses default values.
+
+```{r calculate_msa_mafftdefault}
 mafft_command <- 
   paste("mafft", 
         here::here("data","thirtysevenhomologs_1GATAdomainonly.fasta"),
         ">",
-        here::here("data","thirtysevenhomologs_1GATAdomainonly_mafft.fasta"))
+        here::here("results","thirtysevenhomologs_1GATAdomainonly_mafftdefault.fasta"))
+
+print(mafft_command)
 
 system(mafft_command)
 
-seqs_full_gataonly_mafft <- readAAStringSet(here::here("data","thirtysevenhomologs_1GATAdomainonly_muscle.fasta"))
 ```
 
-These multiple sequence alignments both (by visual inspection) fail to completely align the zinc-finger domains.
+These multiple sequence alignments both (by visual inspection) fail to completely align the zinc-finger domains. So we have to try a different approach.
+
+
+# Multiple sequence alignment with MAFFT using an alignment seed
+
+This changes 3 values:
+
+- `--localpair` to use the most accurate alignment
+- `--seed nhrgatadomain_muscle.fasta` to seed with previous GATA-domain alignment from only 5 homologs
+- `--ep 0.1` to increase the gap extension penalty and have a shorter overall alignment
+
+```{r calculate_msa_mafft_seeded, message = TRUE, warning = TRUE}
+mafft_command <- 
+  paste("mafft", 
+        "--localpair",
+        "--seed", here::here("results", "nhrgatadomain_muscle.fasta"),
+        "--ep 0.1",
+        here::here("data","thirtysevenhomologs_1GATAdomainonly.fasta"),
+        ">",
+        here::here("results","thirtysevenhomologs_1GATAdomainonly_mafftseeded.fasta"))
+
+print(mafft_command)
+
+# check which version of mafft is being run
+system("mafft --version")
+# run the command
+system(mafft_command)
+
+# load the sequences back into R
+seqs_full_gataonly_mafft <-
+  readAAStringSet(here::here("results","thirtysevenhomologs_1GATAdomainonly_mafftseeded.fasta"))
+```
+
+Visual inspection of the alignment showed good alignment of the GATA domain, from position 1602-1636.
+
+```{r display_gatadomain_mafft, fig.height = 4, fig.width = 4}
+seqs_full_gataonly_mafft %>%
+  subseq(start = 1602, end = 1636) %>%
+  ggmsa::ggmsa(color = "Clustal", seq_name = TRUE ) + 
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_text(size = 7))
+```
+
+
 
 # TO DO
 
-- See if we can tweak MAFFT or Muscle parameters to successfully align the GATA domain
-- Use Interpro annotations to extract domain positions and sequences
-- Make a phylogenetic tree
-- Show a MSA of (select) GATA domains
+- Add mafft terminal output to .html??
+- Make a phylogenetic tree and plot it
+- Select most relevant homologs
+- Plot a MSA of select GATA domains
 - Update README file to reflect new contents
 
 
