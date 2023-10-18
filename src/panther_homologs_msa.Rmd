@@ -13,11 +13,14 @@ library(readr)
 library(dplyr)
 library(tidyr)
 library(stringr)
+library(magrittr)
 library(ggplot2)
 library(cowplot)
 library(Biostrings)
 library(msa)
 library(ggmsa)
+library(ggtree)
+library(treeio)
 library(here)
 ```
 
@@ -162,11 +165,6 @@ seqs_full_gataonly_mafft_noseed %>%
 
 # Load the tree
 
-```{r setup_tree, echo=FALSE,message=FALSE}
-library(ggtree)
-library(treeio)
-```
-
 We calculated a phylogenetic tree using IQTREE - add details!
 
 
@@ -254,6 +252,27 @@ ggt_clades <-
 ggt_clades
 ```
 
+
+## Get tips in order from tree
+
+```{r extract_tiporder_tree}
+uniprot_df_gataonly_treeorder <- 
+  ggt$data %>%
+  filter(isTip) %>%
+  arrange(y)
+```
+
+```{r display_gatadomain_mafft_treeord, fig.height = 4, fig.width = 4}
+seqs_full_gataonly_mafft_noseed %>%
+  # select in order
+  .[uniprot_df_gataonly_treeorder$label] %>% 
+  # rename with the slightly more informative names
+  magrittr::set_names(uniprot_df_gataonly_treeorder$UniprotName) %>%
+  subseq(start = 1602, end = 1636) %>%
+  ggmsa::ggmsa(color = "Clustal", seq_name = TRUE ) + 
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_text(size = 7))
+```
 
 # TO DO
 
