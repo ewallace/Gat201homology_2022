@@ -107,7 +107,7 @@ This changes 3 values:
 - `--seed nhrgatadomain_muscle.fasta` to seed with previous GATA-domain alignment from only 5 homologs
 - `--ep 0.1` to increase the gap extension penalty and have a shorter overall alignment
 
-```{r calculate_msa_mafft_seeded, message = TRUE, warning = TRUE}
+```{r calculate_msa_mafft_seeded}
 mafft_command <- 
   paste("mafft", 
         "--localpair",
@@ -123,7 +123,9 @@ print(mafft_command)
 system("mafft --version")
 # run the command
 system(mafft_command)
+```
 
+```{r load_msa_mafft_seeded}
 # load the sequences back into R
 seqs_full_gataonly_mafft <-
   readAAStringSet(here::here("results","thirtysevenhomologs_1GATAdomainonly_mafftseeded.fasta"))
@@ -167,25 +169,21 @@ library(treeio)
 
 We calculated a phylogenetic tree using IQTREE - add details!
 
-REMOVE THE SEED SEQUENCES THEN RERUN ON CIPRES.
 
-Now we load the data
+Now we load the data.
 
 ```{r load_IQTREE}
 # load node labels
 treedef <- 
   here::here("results", "IQTREE",
-             "thirtysevenhomologs_1GATAdomainonly_mafftseeded.fasta.treefile") %>%
+             "output.treefile") %>%
   treeio::read.tree()
 
-# # replace "node.labels" with separate node ids and bootstrap values
-# treedef_IQML$node.id <- stringr::str_extract(treedef_IQML$node.label,"Node[0-9]")
-# treedef_IQML$node.label <- stringr::str_remove(treedef_IQML$node.label,"Node[0-9]+/*")
 ```
 
 ## Reroot to Amoebae ancestor
 
-These trees were rooted to *S. cerevisiae* so we reroot immediately to the amoebazoa ancestor, MRCA of all the Dictyostelium homolots.
+These trees were rooted to *C. neoformans* Gat201 so we reroot immediately to the amoebazoa ancestor, MRCA of all the Dictyostelium homologs.
 
 
 ```{r reroot_amoebae}
@@ -201,7 +199,7 @@ tree <- ape::root(treedef,
                        node=amoebae_MRCA)
 ```
 
-```{r plot_IQML,dependson="load_IQTREE",fig.height=7, fig.width=5}
+```{r plot_tree_default,fig.height=5, fig.width=5}
 ggtree(tree) +
     geom_tiplab(size=2) + 
     geom_treescale(fontsize=4) +
@@ -210,15 +208,15 @@ ggtree(tree) +
 
 
 
-```{r plot_taxa, fig.height=7,fig.width=7}
-ggt_taxa_IQML <- 
-  ggtree(tree, ladderize=FALSE) %<+% 
-  dplyr::rename(uniprot_df_gataonly, label = UniprotID) + # FIX THIS TO ADD DATA TO TREE
-    geom_tiplab(#aes(label=GeneNames),
-                size=2, key_glyph="rect",offset=0.05) + 
-    scale_colour_brewer(type="qual",palette="Dark2",
-                       guide = guide_legend(order = 1)) +
-    ggnewscale::new_scale_color() + 
+```{r plot_tree, fig.height=5,fig.width=7}
+tree_annotated <- 
+  full_join(tree,
+            dplyr::rename(uniprot_df_gataonly, label = UniprotID))
+
+ggt <- 
+  ggtree(tree_annotated, ladderize=FALSE)  + 
+    geom_tiplab(aes(label=UniprotName),
+                size=2, key_glyph="rect",offset=0.05) +
     geom_nodepoint(aes(colour=as.numeric(label)),size=1.8) +
     scale_colour_gradient("bootstrap\nsupport",low="grey95",high="black",
                        guide = guide_colourbar(order = 2)) + 
@@ -227,25 +225,56 @@ ggt_taxa_IQML <-
                        breaks=c(0:3,3.5),
                        labels=c(0:3,"Substns. per site")) + 
     coord_cartesian(clip="off",) + 
-    theme(legend.position=c(0.1,0.7),
+    theme(legend.position=c(0.95,0.2),
           plot.margin=margin(t=5,r = 82, b=5, l=10),
           axis.line.x.bottom = element_line(size=0.5,colour="black"),
           axis.ticks.x.bottom = element_line(size=0.5,colour="black"),
           axis.text.x = element_text(size=10,colour="black"))
-ggt_taxa_IQML
+ggt
+```
+
+```{r plot_tree_clade, fig.height=5,fig.width=7}
+GAT201_MRCA <- MRCA(tree, "Q5KJJ5", "Q59LY1")
+GAT204_MRCA <- MRCA(tree, "Q5KMV3", "F4P6X2")
+ScGAT2_MRCA <- MRCA(tree, "P40209", "Q75EA3")
+  
+
+ggt_clades <- 
+  ggt + 
+  geom_cladelab( node = GAT201_MRCA, label = "Gat201-like", 
+                 offset = 0.6, geom = "text", 
+                 textcolor= "darkred", barcolour = "darkred") + 
+  geom_cladelab( node = GAT204_MRCA, label = "Gat204-like", 
+                 offset = 0.6, geom = "text", 
+                 textcolor= "purple", barcolour = "purple") + 
+  geom_cladelab( node = ScGAT2_MRCA, label = "ScGat2-like", 
+                 offset = 0.6, geom = "text", 
+                 textcolor= "goldenrod", barcolour = "goldenrod")
+
+ggt_clades
 ```
 
 
 # TO DO
 
 - Add mafft terminal output to .html??
-- Make a phylogenetic tree and plot it
 - Select most relevant homologs
 - Plot a MSA of select GATA domains
 - Update README file to reflect new contents
 
 
 # Session info for reproducibility
+
+Note: I ran in to [known issues with `geom_cladelab`](https://github.com/YuLab-SMU/ggtree/issues/588).
+
+I solved them by reinstalling tidytree and ggtree:
+
+```{r reinstall_tidytree, eval = FALSE}
+devtools::install_version("tidytree", version = "0.4.2")
+BiocManager::install("ggtree", force=T, type = 'source')
+```
+
+Verify it in session info:
 
 ```{r session_info}
 sessionInfo()
