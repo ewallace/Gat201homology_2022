@@ -33,9 +33,24 @@ The output multiple sequence alignment can then be used to calculate a phylogene
 
 # Load gene data
 
+Also add some display names of format "Organism, gene name", to use in figures later
+
 ```{r load_gene_data}
 uniprot_df <- here::here("data","PTHR45658_subfamilies_uniprot_info_sequences.txt") %>% 
-  readr::read_tsv(comment = "#")
+  readr::read_tsv(comment = "#") %>%
+  # Next line adds DisplayName
+  dplyr::mutate(DisplayName = 
+                  paste(
+                    genus   = paste0(str_sub(Organism, end = 1), "."),
+                    species = str_extract(Organism, "\\b[a-z]+\\b"),
+                    gene   = str_extract(GeneNames, "[\\w-]+\\b")
+                  ) %>%
+                  # name C. deneoformans GAT201 and GAT204
+                  str_replace("CNC06330", "GAT201") %>%
+                  str_replace("CNB00390", "GAT204") %>%
+                  # remove DRAFT from DICPUDRAFT and BATDEDRAFT
+                  str_remove("DRAFT")
+  )
 
 uniprot_df
 ```
@@ -216,7 +231,7 @@ tree_annotated <-
 
 ggt <- 
   ggtree(tree_annotated, ladderize=FALSE)  + 
-    geom_tiplab(aes(label=UniprotName),
+    geom_tiplab(aes(label=DisplayName),
                 size=2, key_glyph="rect",offset=0.05) +
     geom_nodepoint(aes(colour=as.numeric(label)),size=1.8) +
     scale_colour_gradient("bootstrap\nsupport",low="grey95",high="black",
@@ -272,13 +287,13 @@ ggt_gat201top <-
 ggt_clades <- 
   ggt_gat201top + 
   geom_cladelab( node = GAT201_MRCA, label = "Gat201-like", 
-                 offset = 0.6, geom = "text", 
+                 offset = 0.8, geom = "text", 
                  textcolor= "darkred", barcolour = "darkred") + 
   geom_cladelab( node = GAT204_MRCA, label = "Gat204-like", 
-                 offset = 0.6, geom = "text", 
+                 offset = 0.9, geom = "text", 
                  textcolor= "purple", barcolour = "purple") + 
   geom_cladelab( node = ScGAT2_MRCA, label = "ScGat2-like", 
-                 offset = 0.6, geom = "text", 
+                 offset = 0.9, geom = "text", 
                  textcolor= "goldenrod", barcolour = "goldenrod")
 
 ggt_clades
@@ -289,28 +304,45 @@ ggt_clades
 
 ```{r extract_tiporder_tree}
 uniprot_df_gataonly_treeorder <- 
-  ggt$data %>%
+  ggt_gat201top$data %>%
   filter(isTip) %>%
   arrange(y)
 ```
 
 ```{r display_gatadomain_mafft_treeord, fig.height = 4, fig.width = 4}
-seqs_full_gataonly_mafft_noseed %>%
+msa_gatadomain_mafft_treeord <- 
+  seqs_full_gataonly_mafft_noseed %>%
   # select in order
   .[uniprot_df_gataonly_treeorder$label] %>% 
   # rename with the slightly more informative names
-  magrittr::set_names(uniprot_df_gataonly_treeorder$UniprotName) %>%
+  magrittr::set_names(uniprot_df_gataonly_treeorder$DisplayName) %>%
   subseq(start = 1602, end = 1636) %>%
   ggmsa::ggmsa(color = "Clustal", seq_name = TRUE ) + 
   theme(axis.text.x = element_blank(),
         axis.text.y = element_text(size = 7))
+
+msa_gatadomain_mafft_treeord
 ```
+
+# Plot composite figure of tree and MSA
+
+```{r plot_composite, fig.height=5,fig.width=13}
+cowplot::plot_grid(
+  ggt_clades,
+  msa_gatadomain_mafft_treeord,
+  nrow = 1,
+  rel_widths = c(7,6),
+  labels="AUTO"
+)
+
+here::here("results", "Gat201_pantherhomologs_treemsa.png") %>%
+  ggsave(height = 5, width = 13, bg = "white")
+```
+
 
 # TO DO
 
 - Add mafft terminal output to .html??
-- Select most relevant homologs
-- Plot a MSA of select GATA domains
 - Update README file to reflect new contents
 
 
