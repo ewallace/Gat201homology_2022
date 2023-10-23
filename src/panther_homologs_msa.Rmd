@@ -197,6 +197,8 @@ tree <- ape::root(treedef,
                        node=amoebae_MRCA)
 ```
 
+## Plot tree rooted on Amoebae ancestor
+
 ```{r plot_tree_default,fig.height=5, fig.width=5}
 ggtree(tree) +
     geom_tiplab(size=2) + 
@@ -205,6 +207,7 @@ ggtree(tree) +
 ```
 
 
+## Join tree data and plot again
 
 ```{r plot_tree, fig.height=5,fig.width=7}
 tree_annotated <- 
@@ -231,14 +234,43 @@ ggt <-
 ggt
 ```
 
-```{r plot_tree_clade, fig.height=5,fig.width=7}
-GAT201_MRCA <- MRCA(tree, "Q5KJJ5", "Q59LY1")
-GAT204_MRCA <- MRCA(tree, "Q5KMV3", "F4P6X2")
-ScGAT2_MRCA <- MRCA(tree, "P40209", "Q75EA3")
-  
+## Reorder tree to show CnGAT201 at the top
 
+Order tree (hand-encoded) in order:
+- C. neoformans GAT201 top
+- Then S.cerevisiae GAT2
+- Then C. neoformans GAT204
+
+```{r order_tree_clade, fig.height=5,fig.width=7}
+GAT201_MRCA <- MRCA(tree, "Q5KJJ5", "Q59LY1")
+GAT201_parent <- MRCA(tree, "Q5KJJ5", "A0A0D1DZU2")
+BRG1_parent <- MRCA(tree, "Q59LY1", "V5ILJ3")
+GAT204_MRCA <- MRCA(tree, "Q5KMV3", "F4P6X2")
+GAT204_node <- MRCA(tree, "Q5KMV3")
+GAT204_sibling <- tidytree::sibling(tree, GAT204_node)
+
+ScGAT2_MRCA <- MRCA(tree, "P40209", "Q75EA3")
+
+GAT201_GAT2_MRCA <- MRCA(tree, GAT201_MRCA,ScGAT2_MRCA)
+
+ggt_gat201top <- 
+  ggt %>% 
+  # put Gat201 clade top
+  ggtree::flip(node1 = parent(tree,GAT201_MRCA), node2 = ScGAT2_MRCA) %>% 
+  # put Gat201 top of its clade
+  ggtree::flip(node1 = GAT201_parent, node2 = BRG1_parent) %>% 
+  # put Gat204 top of its clade
+  ggtree::flip(node1 = tidytree::child(tree, GAT204_MRCA)[1], 
+               node2 = tidytree::child(tree, GAT204_MRCA)[2]) %>% 
+  # put Gat204 top of its mini-branch
+  ggtree::flip(node1 = GAT204_node, node2 = GAT204_sibling)
+```
+
+## Plot tree with clades nicely labeled
+
+```{r plot_tree_clade, fig.height=5,fig.width=7}
 ggt_clades <- 
-  ggt + 
+  ggt_gat201top + 
   geom_cladelab( node = GAT201_MRCA, label = "Gat201-like", 
                  offset = 0.6, geom = "text", 
                  textcolor= "darkred", barcolour = "darkred") + 
