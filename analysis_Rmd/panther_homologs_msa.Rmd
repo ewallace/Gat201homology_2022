@@ -1,0 +1,364 @@
+---
+title: "Multiple Sequence Alignment of GAT201 homologs"
+author: "Edward Wallace"
+date: "2023-10-10"
+output: 
+  html_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(magrittr)
+library(ggplot2)
+library(cowplot)
+library(Biostrings)
+library(msa)
+library(ggmsa)
+library(ggtree)
+library(treeio)
+library(here)
+```
+
+# Summary
+
+This file takes selected fungal homologs of GAT201 with the same domain structure.
+It performs a multiple sequence alignment of these homologs.
+
+The output multiple sequence alignment can then be used to calculate a phylogenetic tree.
+
+# Load gene data
+
+Also add some display names of format "Organism, gene name", to use in figures later
+
+```{r load_gene_data}
+uniprot_df <- here::here("data","PTHR45658_subfamilies_uniprot_info_sequences.txt") %>% 
+  readr::read_tsv(comment = "#") %>%
+  # Next line adds DisplayName
+  dplyr::mutate(DisplayName = 
+                  paste(
+                    genus   = paste0(str_sub(Organism, end = 1), "."),
+                    species = str_extract(Organism, "\\b[a-z]+\\b"),
+                    gene   = str_extract(GeneNames, "[\\w-]+\\b")
+                  ) %>%
+                  # name C. deneoformans GAT201 and GAT204
+                  str_replace("CNC06330", "GAT201") %>%
+                  str_replace("CNB00390", "GAT204") %>%
+                  # remove DRAFT from DICPUDRAFT and BATDEDRAFT
+                  str_remove("DRAFT")
+  )
+
+uniprot_df
+```
+
+
+# Filter genes to those with only GATA domains
+
+We exclude homologs with other domains, including white-collar 2 (wc-2, lreB, etc.) that have an additional PAS domain.
+
+The relevant interpro domains are `IPR000679;IPR013088;`. These are two overlapping homologous superfamilies:
+
+- [IPR000679 is Zinc finger, GATA-type](https://www.ebi.ac.uk/interpro/entry/InterPro/IPR000679/)
+- [IPR013088 is Zinc finger, NHR/GATA-type](https://www.ebi.ac.uk/interpro/entry/InterPro/IPR013088/) is the larger superfamily.
+
+```{r filter_by_domain}
+gata_domains <- "IPR000679;IPR013088;"
+
+uniprot_df_gataonly <- uniprot_df %>%
+  dplyr::filter(InterPro == gata_domains)
+
+uniprot_df_gataonly %>% 
+  dplyr::select(GeneID, UniprotID, Organism, Length) %>%
+  print(n = 40)
+```
+
+## Extract Sequences only and save to fasta
+
+```{r extract_sequences}
+seqs_full_gataonly <- Biostrings::AAStringSet(x = uniprot_df_gataonly$Sequence) %>%
+  setNames(nm = uniprot_df_gataonly$UniprotID)
+
+writeXStringSet(x = seqs_full_gataonly, 
+                filepath = here::here("data","thirtysevenhomologs_1GATAdomainonly.fasta"))
+```
+
+
+# Multiple sequence alignment with Muscle
+
+```{r calculate_msa_muscle_full}
+seqs_full_gataonly_muscle <- msa(inputSeqs = seqs_full_gataonly, method = "Muscle") %>% 
+  as("AAStringSet")
+
+seqs_full_gataonly_muscle %>% 
+  writeXStringSet(filepath = here::here("results","thirtysevenhomologs_1GATAdomainonly_muscle.fasta"))
+```
+
+# Multiple sequence alignment with MAFFT (on command line)
+
+This uses default values.
+
+```{r calculate_msa_mafftdefault}
+mafft_command <- 
+  paste("mafft", 
+        here::here("data","thirtysevenhomologs_1GATAdomainonly.fasta"),
+        ">",
+        here::here("results","thirtysevenhomologs_1GATAdomainonly_mafftdefault.fasta"))
+
+print(mafft_command)
+
+system(mafft_command)
+
+```
+
+These multiple sequence alignments both (by visual inspection) fail to completely align the zinc-finger domains. So we have to try a different approach.
+
+
+# Multiple sequence alignment with MAFFT using an alignment seed
+
+This changes 3 values:
+
+- `--localpair` to use the most accurate alignment
+- `--seed nhrgatadomain_muscle.fasta` to seed with previous GATA-domain alignment from only 5 homologs
+- `--ep 0.1` to increase the gap extension penalty and have a shorter overall alignment
+
+```{r calculate_msa_mafft_seeded}
+mafft_command <- 
+  paste("mafft", 
+        "--localpair",
+        "--seed", here::here("results", "nhrgatadomain_muscle.fasta"),
+        "--ep 0.1",
+        here::here("data","thirtysevenhomologs_1GATAdomainonly.fasta"),
+        ">",
+        here::here("results","thirtysevenhomologs_1GATAdomainonly_mafftseeded.fasta"))
+
+print(mafft_command)
+
+# check which version of mafft is being run
+system("mafft --version")
+# run the command
+system(mafft_command)
+```
+
+```{r load_msa_mafft_seeded}
+# load the sequences back into R
+seqs_full_gataonly_mafft <-
+  readAAStringSet(here::here("results","thirtysevenhomologs_1GATAdomainonly_mafftseeded.fasta"))
+```
+
+## Remove the seed sequences from the alignment
+
+To avoid phylogeny problems and confusion.
+
+```{r removeseedseqs}
+# select sequence ids with no seed, but in the same order
+seqids_noseed <- 
+  seqs_full_gataonly_mafft %>%
+  names() %>%
+  .[!stringr::str_starts(., "_seed_")]
+
+seqs_full_gataonly_mafft_noseed <-
+  seqs_full_gataonly_mafft[seqids_noseed]
+
+seqs_full_gataonly_mafft_noseed %>%
+  writeXStringSet(here::here("results","thirtysevenhomologs_1GATAdomainonly_mafftseeded_noseed.fasta"))
+```
+
+
+Visual inspection of the alignment showed good alignment of the GATA domain, from position 1602-1636.
+
+```{r display_gatadomain_mafft, fig.height = 4, fig.width = 4}
+seqs_full_gataonly_mafft_noseed %>%
+  subseq(start = 1602, end = 1636) %>%
+  ggmsa::ggmsa(color = "Clustal", seq_name = TRUE ) + 
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_text(size = 7))
+```
+
+# Load the tree
+
+We calculated a phylogenetic tree using IQTREE - add details!
+
+
+Now we load the data.
+
+```{r load_IQTREE}
+# load node labels
+treedef <- 
+  here::here("results", "IQTREE",
+             "output.treefile") %>%
+  treeio::read.tree()
+
+```
+
+## Reroot to Amoebae ancestor
+
+These trees were rooted to *C. neoformans* Gat201 so we reroot immediately to the amoebazoa ancestor, MRCA of all the Dictyostelium homologs.
+
+
+```{r reroot_amoebae}
+# find amoeba (DDB) homolog uniprot id
+DDB_gataonly_uniprotIDs <- 
+  uniprot_df_gataonly %>% 
+  dplyr::filter( stringr::str_starts(GeneID, "DDB")  ) %>%
+  dplyr::pull( UniprotID )
+
+amoebae_MRCA <- MRCA(treedef, DDB_gataonly_uniprotIDs ) 
+
+tree <- ape::root(treedef,
+                       node=amoebae_MRCA)
+```
+
+## Plot tree rooted on Amoebae ancestor
+
+```{r plot_tree_default,fig.height=5, fig.width=5}
+ggtree(tree) +
+    geom_tiplab(size=2) + 
+    geom_treescale(fontsize=4) +
+    geom_nodelab(size=2,nudge_x=0.05,colour="blue")
+```
+
+
+## Join tree data and plot again
+
+```{r plot_tree, fig.height=5,fig.width=7}
+tree_annotated <- 
+  full_join(tree,
+            dplyr::rename(uniprot_df_gataonly, label = UniprotID))
+
+ggt <- 
+  ggtree(tree_annotated, ladderize=FALSE)  + 
+    geom_tiplab(aes(label=DisplayName),
+                size=2, key_glyph="rect",offset=0.05) +
+    geom_nodepoint(aes(colour=as.numeric(label)),size=1.8) +
+    scale_colour_gradient("bootstrap\nsupport",low="grey95",high="black",
+                       guide = guide_colourbar(order = 2)) + 
+    scale_y_reverse(expand=c(0.02,0.02)) + 
+    scale_x_continuous(expand=c(0.01,0.01),
+                       breaks=c(0:3,3.5),
+                       labels=c(0:3,"Substns. per site")) + 
+    coord_cartesian(clip="off",) + 
+    theme(legend.position=c(0.95,0.2),
+          plot.margin=margin(t=5,r = 82, b=5, l=10),
+          axis.line.x.bottom = element_line(size=0.5,colour="black"),
+          axis.ticks.x.bottom = element_line(size=0.5,colour="black"),
+          axis.text.x = element_text(size=10,colour="black"))
+ggt
+```
+
+## Reorder tree to show CnGAT201 at the top
+
+Order tree (hand-encoded) in order:
+- C. neoformans GAT201 top
+- Then S.cerevisiae GAT2
+- Then C. neoformans GAT204
+
+```{r order_tree_clade, fig.height=5,fig.width=7}
+GAT201_MRCA <- MRCA(tree, "Q5KJJ5", "Q59LY1")
+GAT201_parent <- MRCA(tree, "Q5KJJ5", "A0A0D1DZU2")
+BRG1_parent <- MRCA(tree, "Q59LY1", "V5ILJ3")
+GAT204_MRCA <- MRCA(tree, "Q5KMV3", "F4P6X2")
+GAT204_node <- MRCA(tree, "Q5KMV3")
+GAT204_sibling <- tidytree::sibling(tree, GAT204_node)
+
+ScGAT2_MRCA <- MRCA(tree, "P40209", "Q75EA3")
+
+GAT201_GAT2_MRCA <- MRCA(tree, GAT201_MRCA,ScGAT2_MRCA)
+
+ggt_gat201top <- 
+  ggt %>% 
+  # put Gat201 clade top
+  ggtree::flip(node1 = parent(tree,GAT201_MRCA), node2 = ScGAT2_MRCA) %>% 
+  # put Gat201 top of its clade
+  ggtree::flip(node1 = GAT201_parent, node2 = BRG1_parent) %>% 
+  # put Gat204 top of its clade
+  ggtree::flip(node1 = tidytree::child(tree, GAT204_MRCA)[1], 
+               node2 = tidytree::child(tree, GAT204_MRCA)[2]) %>% 
+  # put Gat204 top of its mini-branch
+  ggtree::flip(node1 = GAT204_node, node2 = GAT204_sibling)
+```
+
+## Plot tree with clades nicely labeled
+
+```{r plot_tree_clade, fig.height=5,fig.width=7}
+ggt_clades <- 
+  ggt_gat201top + 
+  geom_cladelab( node = GAT201_MRCA, label = "Gat201-like", 
+                 offset = 0.8, geom = "text", 
+                 textcolor= "darkred", barcolour = "darkred") + 
+  geom_cladelab( node = GAT204_MRCA, label = "Gat204-like", 
+                 offset = 0.9, geom = "text", 
+                 textcolor= "purple", barcolour = "purple") + 
+  geom_cladelab( node = ScGAT2_MRCA, label = "ScGat2-like", 
+                 offset = 0.9, geom = "text", 
+                 textcolor= "goldenrod", barcolour = "goldenrod")
+
+ggt_clades
+```
+
+
+## Get tips in order from tree
+
+```{r extract_tiporder_tree}
+uniprot_df_gataonly_treeorder <- 
+  ggt_gat201top$data %>%
+  filter(isTip) %>%
+  arrange(y)
+```
+
+```{r display_gatadomain_mafft_treeord, fig.height = 4, fig.width = 4}
+msa_gatadomain_mafft_treeord <- 
+  seqs_full_gataonly_mafft_noseed %>%
+  # select in order
+  .[uniprot_df_gataonly_treeorder$label] %>% 
+  # rename with the slightly more informative names
+  magrittr::set_names(uniprot_df_gataonly_treeorder$DisplayName) %>%
+  subseq(start = 1602, end = 1636) %>%
+  ggmsa::ggmsa(color = "Clustal", seq_name = TRUE ) + 
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_text(size = 7))
+
+msa_gatadomain_mafft_treeord
+```
+
+# Plot composite figure of tree and MSA
+
+```{r plot_composite, fig.height=5,fig.width=13}
+cowplot::plot_grid(
+  ggt_clades,
+  msa_gatadomain_mafft_treeord,
+  nrow = 1,
+  rel_widths = c(7,6),
+  labels="AUTO"
+)
+
+here::here("results", "Gat201_pantherhomologs_treemsa.png") %>%
+  ggsave(height = 5, width = 13, bg = "white")
+```
+
+
+# TO DO
+
+- Add mafft terminal output to .html??
+- Update README file to reflect new contents
+
+
+# Session info for reproducibility
+
+Note: I ran in to [known issues with `geom_cladelab`](https://github.com/YuLab-SMU/ggtree/issues/588).
+
+I solved them by reinstalling tidytree and ggtree:
+
+```{r reinstall_tidytree, eval = FALSE}
+devtools::install_version("tidytree", version = "0.4.2")
+BiocManager::install("ggtree", force=T, type = 'source')
+```
+
+Verify it in session info:
+
+```{r session_info}
+sessionInfo()
+```
