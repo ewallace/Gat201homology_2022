@@ -3,8 +3,8 @@
 This repository is supplementary data accompanying the bioRxiv preprint:
 
 > A trade-off between proliferation and defense in the fungal pathogen Cryptococcus at alkaline pH is controlled by the transcription factor GAT201.
-> Elizabeth S. Hughes, Zhenzhen He, Laura R. Tuck, Elizabeth R. Ballou, Edward W.J. Wallace.
-> bioRxiv preprint, 2023
+> Elizabeth S. Hughes, Laura R. Tuck, Zhenzhen He, Elizabeth R. Ballou, Edward W.J. Wallace.
+> bioRxiv preprint, 2024
 > https://doi.org/10.1101/2023.06.14.543486
 
 The repository contains only an analysis of homology of Cryptococcus neoformans Gat201 and related GATA-family transcription factors.
